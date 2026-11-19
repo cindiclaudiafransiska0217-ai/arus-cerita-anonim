@@ -538,7 +538,34 @@
   </div>
 
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      set,
+      push,
+      onValue,
+      runTransaction
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA9jHz2YZX48rhwv6mAZbUTqQzIIjd9qMg",
+      authDomain: "arus-cerita-anonim.firebaseapp.com",
+      databaseURL: "https://arus-cerita-anonim-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "arus-cerita-anonim",
+      storageBucket: "arus-cerita-anonim.firebasestorage.app",
+      messagingSenderId: "708242341136",
+      appId: "1:708242341136:web:ba8200898b268542ddf905"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const bottlesRef = ref(db, "bottles");
+    const lanternsRef = ref(db, "lanterns");
+    const whispersRef = ref(db, "whispers");
+
     function wordCount(str) {
       const s = str.trim();
       if (!s) return 0;
@@ -557,7 +584,7 @@
     }
 
     function escapeHtml(str) {
-      return str
+      return String(str)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -599,7 +626,8 @@
           id: `seed-bottle-${i + 1}`,
           alias,
           text,
-          hugs: i % 5
+          hugs: i % 5,
+          createdAt: i + 1
         });
       }
       return list;
@@ -627,17 +655,19 @@
         const extra = i % 2 === 0 ? ` ${extras[i % extras.length]}` : "";
         list.push({
           id: `seed-lantern-${i + 1}`,
-          text: `${base}${extra}`
+          text: `${base}${extra}`,
+          createdAt: i + 1
         });
       }
       return list;
     }
 
-    const bottlesData = buildSeedBottles(20);
-    const lanternsData = buildSeedLanterns(20);
-    const whispersData = [];
+    let bottlesData = buildSeedBottles(20);
+    let lanternsData = buildSeedLanterns(20);
+    let whispersData = [];
     let chosenMood = "";
     let isLanternViewActive = false;
+    let activeLetterBottleId = null;
 
     const storyInput = document.getElementById("storyInput");
     const refreshStoryCount = bindCounter(storyInput, document.getElementById("storyCount"), 100);
@@ -874,18 +904,41 @@
       flyingLanternMeshes.push(lMesh);
     }
 
-    for (let i = 0; i < bottlesData.length; i++) {
-      const spreadX = -7.2 + (i / 19) * 14.4;
-      const spreadZ = -2.2 + ((i * 37) % 10) * 0.45;
-      spawnBottleIn3D(bottlesData[i].id, false, { x: spreadX, z: spreadZ });
+    function syncBottles3D(items, newlyAddedIds = new Set()) {
+      const existingIds = new Set(bottleMeshes.map((m) => m.children[0]?.userData?.itemId));
+      const newItems = items.filter((item) => !existingIds.has(item.id));
+      const total = Math.max(items.length, 1);
+
+      newItems.forEach((item, idx) => {
+        if (newlyAddedIds.has(item.id)) {
+          spawnBottleIn3D(item.id, true);
+        } else {
+          const spreadX = -7.2 + (idx / Math.max(total - 1, 1)) * 14.4;
+          const spreadZ = -2.2 + ((idx * 37) % 10) * 0.45;
+          spawnBottleIn3D(item.id, false, { x: spreadX, z: spreadZ });
+        }
+      });
     }
 
-    for (let i = 0; i < lanternsData.length; i++) {
-      const lx = -7.5 + (i / 19) * 15;
-      const ly = 2.1 + ((i * 29) % 10) * 0.42;
-      const lz = -5.2 + ((i * 19) % 8) * 0.55;
-      spawnFlyingLantern(lanternsData[i].id, false, { x: lx, y: ly, z: lz });
+    function syncLanterns3D(items, newlyAddedIds = new Set()) {
+      const existingIds = new Set(flyingLanternMeshes.map((m) => m.children[0]?.userData?.itemId));
+      const newItems = items.filter((item) => !existingIds.has(item.id));
+      const total = Math.max(items.length, 1);
+
+      newItems.forEach((item, idx) => {
+        if (newlyAddedIds.has(item.id)) {
+          spawnFlyingLantern(item.id, true);
+        } else {
+          const lx = -7.5 + (idx / Math.max(total - 1, 1)) * 15;
+          const ly = 2.1 + ((idx * 29) % 10) * 0.42;
+          const lz = -5.2 + ((idx * 19) % 8) * 0.55;
+          spawnFlyingLantern(item.id, false, { x: lx, y: ly, z: lz });
+        }
+      });
     }
+
+    syncBottles3D(bottlesData);
+    syncLanterns3D(lanternsData);
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
@@ -917,6 +970,9 @@
 
     function closeModal(id) {
       document.getElementById(id).classList.remove("open");
+      if (id === "letterModal") {
+        activeLetterBottleId = null;
+      }
     }
 
     document.querySelectorAll("[data-close]").forEach((btn) => {
@@ -934,7 +990,7 @@
     document.getElementById("navSend").addEventListener("click", openSendModal);
     document.getElementById("mainSendBtn").addEventListener("click", openSendModal);
 
-    document.getElementById("submitStoryBtn").addEventListener("click", () => {
+    document.getElementById("submitStoryBtn").addEventListener("click", async () => {
       const alias = aliasInput.value.trim() || "Anonim";
       const text = storyInput.value.trim();
       const wc = wordCount(text);
@@ -948,50 +1004,62 @@
         return;
       }
 
-      const id = `bottle-${Date.now()}-${Math.random()}`;
-      bottlesData.unshift({
-        id,
-        alias,
-        text,
-        hugs: 0
-      });
+      try {
+        const newRef = push(bottlesRef);
+        const id = newRef.key;
+        await set(newRef, {
+          alias,
+          text,
+          hugs: 0,
+          createdAt: Date.now()
+        });
 
-      aliasInput.value = "";
-      storyInput.value = "";
-      refreshStoryCount();
-      sendStatus.textContent = "Botol hanyut ke laut dan bintang jatuh melintas di langit malam.";
-      spawnBottleIn3D(id, true);
-      triggerShootingStar();
+        aliasInput.value = "";
+        storyInput.value = "";
+        refreshStoryCount();
+        sendStatus.textContent = "Botol hanyut ke laut dan bintang jatuh melintas di langit malam.";
+        triggerShootingStar();
+      } catch (err) {
+        sendStatus.textContent = "Gagal menyimpan ke database. Periksa koneksi atau aturan Firebase.";
+      }
     });
 
     const letterSheet = document.getElementById("letterSheet");
     const letterStatus = document.getElementById("letterStatus");
 
-    function openLetterById(bottleId) {
-      const item = bottlesData.find((b) => b.id === bottleId);
-      if (!item) return;
-      letterStatus.textContent = "";
-
+    function renderLetterModalContent(item) {
       letterSheet.innerHTML = `
         <div class="letter-from">Dari: ${escapeHtml(item.alias)}</div>
         <div class="letter-body">${escapeHtml(item.text)}</div>
         <div class="letter-actions">
-          <button type="button" class="btn-hug" id="hugBtn">🫂 Pelukan Virtual (${item.hugs})</button>
+          <button type="button" class="btn-hug" id="hugBtn">🫂 Pelukan Virtual (${item.hugs || 0})</button>
         </div>
       `;
 
-      openModal("letterModal");
-
-      document.getElementById("hugBtn").addEventListener("click", () => {
-        item.hugs += 1;
-        document.getElementById("hugBtn").textContent = `🫂 Pelukan Virtual (${item.hugs})`;
-        letterStatus.textContent = "Pelukan virtual dikirim.";
+      document.getElementById("hugBtn").addEventListener("click", async () => {
+        const targetRef = ref(db, `bottles/${item.id}/hugs`);
+        try {
+          await runTransaction(targetRef, (current) => (current || 0) + 1);
+          letterStatus.textContent = "Pelukan virtual dikirim.";
+        } catch (err) {
+          letterStatus.textContent = "Gagal mengirim pelukan virtual.";
+        }
       });
+    }
+
+    function openLetterById(bottleId) {
+      const item = bottlesData.find((b) => b.id === bottleId);
+      if (!item) return;
+      activeLetterBottleId = bottleId;
+      letterStatus.textContent = "";
+      renderLetterModalContent(item);
+      openModal("letterModal");
     }
 
     function openLanternById(lanternId) {
       const item = lanternsData.find((l) => l.id === lanternId);
       if (!item) return;
+      activeLetterBottleId = null;
       letterStatus.textContent = "";
       letterSheet.innerHTML = `
         <div class="letter-from">Lentera Ucapan Terima Kasih</div>
@@ -1038,7 +1106,7 @@
 
     renderLanterns();
 
-    document.getElementById("addLanternBtn").addEventListener("click", () => {
+    document.getElementById("addLanternBtn").addEventListener("click", async () => {
       const txt = lanternInput.value.trim();
       const wc = wordCount(txt);
       if (!txt) {
@@ -1049,13 +1117,19 @@
         lanternStatus.textContent = "Ucapan terima kasih maksimal 40 kata.";
         return;
       }
-      const newId = `lantern-${Date.now()}-${Math.random()}`;
-      lanternsData.unshift({ id: newId, text: txt });
-      lanternInput.value = "";
-      refreshLanternCount();
-      lanternStatus.textContent = "Lentera hangat dinyalakan dan melayang di langit malam 3D.";
-      renderLanterns();
-      spawnFlyingLantern(newId, true);
+
+      try {
+        const newRef = push(lanternsRef);
+        await set(newRef, {
+          text: txt,
+          createdAt: Date.now()
+        });
+        lanternInput.value = "";
+        refreshLanternCount();
+        lanternStatus.textContent = "Lentera hangat dinyalakan dan melayang di langit malam 3D.";
+      } catch (err) {
+        lanternStatus.textContent = "Gagal menyimpan lentera ke database.";
+      }
     });
 
     const whisperStatus = document.getElementById("whisperStatus");
@@ -1074,7 +1148,7 @@
       openModal("whisperModal");
     });
 
-    document.getElementById("submitWhisperBtn").addEventListener("click", () => {
+    document.getElementById("submitWhisperBtn").addEventListener("click", async () => {
       const msg = whisperInput.value.trim();
       const wc = wordCount(msg);
       if (!chosenMood) {
@@ -1090,15 +1164,24 @@
         return;
       }
 
-      whispersData.unshift({ mood: chosenMood, msg });
-      chosenMood = "";
-      document.querySelectorAll(".mood-btn").forEach((b) => b.classList.remove("selected"));
-      whisperInput.value = "";
-      refreshWhisperCount();
-      whisperStatus.textContent = "Terkunci dan terkirim khusus ke pembuat.";
+      try {
+        const newRef = push(whispersRef);
+        await set(newRef, {
+          mood: chosenMood,
+          msg,
+          createdAt: Date.now()
+        });
+        chosenMood = "";
+        document.querySelectorAll(".mood-btn").forEach((b) => b.classList.remove("selected"));
+        whisperInput.value = "";
+        refreshWhisperCount();
+        whisperStatus.textContent = "Terkunci dan terkirim khusus ke pembuat.";
+      } catch (err) {
+        whisperStatus.textContent = "Gagal mengirim bisikan ke database.";
+      }
     });
 
-    document.getElementById("openSecretBtn").addEventListener("click", () => {
+    function renderWhispers() {
       if (whispersData.length === 0) {
         secretList.innerHTML = `<div class="empty-state">Belum ada bisikan masuk.</div>`;
       } else {
@@ -1106,7 +1189,111 @@
           .map((w) => `<div class="secret-item"><strong>[${escapeHtml(w.mood)}]</strong> ${escapeHtml(w.msg)}</div>`)
           .join("");
       }
+    }
+
+    document.getElementById("openSecretBtn").addEventListener("click", () => {
+      renderWhispers();
       openModal("secretModal");
+    });
+
+    let initialBottlesLoaded = false;
+    onValue(bottlesRef, (snapshot) => {
+      const raw = snapshot.val();
+      const seeds = buildSeedBottles(20);
+      const prevIds = new Set(bottlesData.map((b) => b.id));
+
+      if (!raw) {
+        if (!initialBottlesLoaded) {
+          initialBottlesLoaded = true;
+          seeds.forEach((s) => {
+            set(ref(db, `bottles/${s.id}`), {
+              alias: s.alias,
+              text: s.text,
+              hugs: s.hugs,
+              createdAt: s.createdAt
+            }).catch(() => {});
+          });
+        }
+        bottlesData = seeds;
+      } else {
+        initialBottlesLoaded = true;
+        const dbList = Object.entries(raw).map(([id, val]) => ({
+          id,
+          alias: val.alias || "Anonim",
+          text: val.text || "",
+          hugs: Number(val.hugs || 0),
+          createdAt: Number(val.createdAt || 0)
+        }));
+        dbList.sort((a, b) => b.createdAt - a.createdAt);
+        bottlesData = dbList;
+      }
+
+      const addedIds = new Set(
+        bottlesData.filter((b) => !prevIds.has(b.id)).map((b) => b.id)
+      );
+      syncBottles3D(bottlesData, addedIds);
+
+      if (activeLetterBottleId) {
+        const updatedActive = bottlesData.find((b) => b.id === activeLetterBottleId);
+        if (updatedActive && document.getElementById("letterModal").classList.contains("open")) {
+          const hugBtn = document.getElementById("hugBtn");
+          if (hugBtn) {
+            hugBtn.textContent = `🫂 Pelukan Virtual (${updatedActive.hugs || 0})`;
+          }
+        }
+      }
+    });
+
+    let initialLanternsLoaded = false;
+    onValue(lanternsRef, (snapshot) => {
+      const raw = snapshot.val();
+      const seeds = buildSeedLanterns(20);
+      const prevIds = new Set(lanternsData.map((l) => l.id));
+
+      if (!raw) {
+        if (!initialLanternsLoaded) {
+          initialLanternsLoaded = true;
+          seeds.forEach((s) => {
+            set(ref(db, `lanterns/${s.id}`), {
+              text: s.text,
+              createdAt: s.createdAt
+            }).catch(() => {});
+          });
+        }
+        lanternsData = seeds;
+      } else {
+        initialLanternsLoaded = true;
+        const dbList = Object.entries(raw).map(([id, val]) => ({
+          id,
+          text: val.text || "",
+          createdAt: Number(val.createdAt || 0)
+        }));
+        dbList.sort((a, b) => b.createdAt - a.createdAt);
+        lanternsData = dbList;
+      }
+
+      const addedIds = new Set(
+        lanternsData.filter((l) => !prevIds.has(l.id)).map((l) => l.id)
+      );
+      syncLanterns3D(lanternsData, addedIds);
+      renderLanterns();
+    });
+
+    onValue(whispersRef, (snapshot) => {
+      const raw = snapshot.val();
+      if (!raw) {
+        whispersData = [];
+      } else {
+        const dbList = Object.entries(raw).map(([id, val]) => ({
+          id,
+          mood: val.mood || "",
+          msg: val.msg || "",
+          createdAt: Number(val.createdAt || 0)
+        }));
+        dbList.sort((a, b) => b.createdAt - a.createdAt);
+        whispersData = dbList;
+      }
+      renderWhispers();
     });
 
     const clock = new THREE.Clock();
