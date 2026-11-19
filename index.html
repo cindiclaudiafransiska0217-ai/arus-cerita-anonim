@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tempat Curhat Anonim</title>
+  <style>
+    :root {
+      --accent: #f6c973;
+      --accent-text: #1b1407;
+      --panel-bg: rgba(9, 24, 38, 0.34);
+      --panel-border: rgba(255, 255, 255, 0.2);
+      --text-main: #f5f9fc;
+      --text-soft: #d9ecfa;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      overflow-x: hidden;
+      background: #06101b;
+      color: var(--text-main);
+    }
+
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+    }
+
+    .ui-layer {
+      position: relative;
+      z-index: 3;
+      min-height: 100vh;
+      padding: 18px 24px 72px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+      pointer-events: none;
+    }
+
+    .ui-layer > * {
+      pointer-events: auto;
+    }
+
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-radius: 999px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--panel-border);
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    .nav-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 0.84rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.15s ease, color 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .nav-btn.active {
+      background: var(--accent);
+      color: var(--accent-text);
+      border-color: transparent;
+      font-weight: 700;
+    }
+
+    .hero {
+      text-align: center;
+      max-width: 680px;
+      margin: auto;
+      padding: 10px 14px;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 4.4vw, 3.2rem);
+      font-weight: 600;
+      letter-spacing: 0.4px;
+    }
+
+    .hero p {
+      margin-top: 8px;
+      font-size: 0.98rem;
+      color: var(--text-soft);
+      line-height: 1.5;
+    }
+
+    .cta-group {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .btn-warm {
+      background: linear-gradient(135deg, rgba(246, 211, 139, 0.92), rgba(227, 179, 89, 0.92));
+      color: #1a1408;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 24px;
+      font-size: 0.94rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      transition: transform 0.18s ease;
+    }
+
+    .btn-glass {
+      background: rgba(12, 31, 49, 0.36);
+      color: #eef7ff;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 12px 22px;
+      font-size: 0.94rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.2s ease;
+    }
+
+    .btn-warm:hover, .btn-glass:hover {
+      transform: translateY(-2px);
+    }
+
+    .lantern-panel {
+      display: none;
+      max-width: 820px;
+      width: 100%;
+      margin: 0 auto 20px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--panel-border);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
+    }
+
+    .lantern-panel.open {
+      display: block;
+    }
+
+    .lantern-panel h2 {
+      font-size: 1.15rem;
+      color: #ffe599;
+    }
+
+    .lantern-panel p {
+      margin-top: 4px;
+      font-size: 0.88rem;
+      color: var(--text-soft);
+    }
+
+    .lantern-grid {
+      margin-top: 16px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding-right: 4px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .lantern-card {
+      background: rgba(255, 226, 153, 0.09);
+      border: 1px solid rgba(255, 226, 153, 0.3);
+      border-radius: 16px;
+      padding: 13px;
+      font-size: 0.88rem;
+      line-height: 1.48;
+      word-break: break-word;
+    }
+
+    .empty-state {
+      font-size: 0.86rem;
+      color: var(--text-soft);
+      opacity: 0.85;
+    }
+
+    .bottom-corner {
+      position: fixed;
+      right: 16px;
+      bottom: 14px;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .whisper-trigger {
+      background: rgba(12, 31, 49, 0.38);
+      color: #eef7ff;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .secret-trigger {
+      background: rgba(12, 31, 49, 0.26);
+      color: rgba(255, 255, 255, 0.7);
+      border: 1px dashed rgba(255, 255, 255, 0.28);
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .secret-trigger:hover {
+      color: #ffe599;
+      border-color: rgba(255, 229, 153, 0.65);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      background: rgba(4, 11, 18, 0.35);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 480px;
+      background: rgba(12, 31, 49, 0.45);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 22px 50px rgba(0, 0, 0, 0.38);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .modal-header h2 {
+      font-size: 1.12rem;
+      color: #ffe599;
+    }
+
+    .close-btn {
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .field {
+      margin-bottom: 12px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--text-soft);
+      margin-bottom: 5px;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      padding: 10px 12px;
+      font-size: 0.92rem;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 105px;
+      resize: vertical;
+    }
+
+    .word-count {
+      text-align: right;
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      margin-top: 4px;
+    }
+
+    .word-count.over {
+      color: #ff9aa2;
+      font-weight: 700;
+    }
+
+    .letter-sheet {
+      background: linear-gradient(180deg, rgba(252, 245, 227, 0.82) 0%, rgba(245, 230, 196, 0.82) 100%);
+      backdrop-filter: blur(6px);
+      color: #2b2012;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: inset 0 0 22px rgba(173, 134, 72, 0.25), 0 12px 26px rgba(0, 0, 0, 0.25);
+      border-top: 6px solid rgba(223, 190, 130, 0.85);
+      border-bottom: 6px solid rgba(223, 190, 130, 0.85);
+    }
+
+    .letter-from {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #7a5523;
+      margin-bottom: 8px;
+    }
+
+    .letter-body {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .letter-actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-hug {
+      background: rgba(255, 143, 163, 0.9);
+      color: #2b0912;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mood-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .mood-btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+      padding: 6px 13px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .mood-btn.selected {
+      background: #f6d38b;
+      color: #1a1408;
+      border-color: transparent;
+      font-weight: 700;
+    }
+
+    .status-msg {
+      margin-top: 9px;
+      font-size: 0.84rem;
+      color: #9ef0d0;
+      min-height: 18px;
+    }
+
+    .secret-box {
+      max-height: 280px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .secret-item {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div class="ui-layer">
+    <header class="top-bar">
+      <nav class="nav-group">
+        <button class="nav-btn active" id="navSend">Kirim Botol</button>
+        <button class="nav-btn" id="navPick">Pungut Botol Acak</button>
+        <button class="nav-btn" id="navLantern">Lentera Curhat</button>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>Tempat Curhat Anonim</h1>
+      <p>Ruang tenang untuk melepaskan cerita dan saling mendengarkan tanpa dihakimi.</p>
+      <div class="cta-group">
+        <button class="btn-warm" id="mainSendBtn">Hanyutkan Curhatmu</button>
+        <button class="btn-glass" id="mainPickBtn">Pungut Botol Acak</button>
+      </div>
+    </section>
+
+    <section class="lantern-panel" id="lanternPanel">
+      <h2>Lentera Curhat</h2>
+      <p>Ruang hangat untuk menitipkan ucapan terima kasih buat dirimu sendiri.</p>
+      <div class="field" style="margin-top: 12px;">
+        <textarea id="lanternInput" rows="3" placeholder="Tulis ucapan terima kasih untuk dirimu sendiri (maks. 40 kata)..."></textarea>
+        <div class="word-count" id="lanternCount">0 / 40 kata</div>
+      </div>
+      <button class="btn-warm" id="addLanternBtn">Nyalakan Lentera</button>
+      <div class="status-msg" id="lanternStatus"></div>
+      <div class="lantern-grid" id="lanternGrid"></div>
+    </section>
+  </div>
+
+  <!-- Pojok Bawah: Bisik ke Pembuat & Tombol Rahasia -->
+  <div class="bottom-corner">
+    <button class="whisper-trigger" id="openWhisperBtn">Bisik ke Pembuat</button>
+    <button class="secret-trigger" id="openSecretBtn" title="Catatan rahasia pembuat">•••</button>
+  </div>
+
+  <!-- Modal Kirim Botol -->
+  <div class="modal-backdrop" id="sendModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Kirim Botol</h2>
+        <button class="close-btn" data-close="sendModal">&times;</button>
+      </div>
+      <div class="field">
+        <label for="aliasInput">Nama Samaran (opsional)</label>
+        <input type="text" id="aliasInput" maxlength="30" placeholder="Kosongkan jika ingin otomatis jadi Anonim" />
+      </div>
+      <div class="field">
+        <label for="storyInput">Isi Cerita (maksimal 100 kata)</label>
+        <textarea id="storyInput" placeholder="Tuliskan ceritamu..."></textarea>
+        <div class="word-count" id="storyCount">0 / 100 kata</div>
+      </div>
+      <button class="btn-warm" id="submitStoryBtn">Hanyutkan Curhatmu</button>
+      <div class="status-msg" id="sendStatus"></div>
+    </div>
+  </div>
+
+  <!-- Modal Surat di Tengah Layar -->
+  <div class="modal-backdrop" id="letterModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Surat di Dalam Botol</h2>
+        <button class="close-btn" data-close="letterModal">&times;</button>
+      </div>
+      <div class="letter-sheet" id="letterSheet"></div>
+      <div class="status-msg" id="letterStatus"></div>
+    </div>
+  </div>
+
+  <!-- Modal Bisik ke Pembuat -->
+  <div class="modal-backdrop" id="whisperModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Bisik ke Pembuat</h2>
+        <button class="close-btn" data-close="whisperModal">&times;</button>
+      </div>
+      <div class="field">
+        <label>Pilih 1 Suasana Hati</label>
+        <div class="mood-options" id="moodOptions">
+          <button type="button" class="mood-btn" data-mood="Tenang">Tenang</button>
+          <button type="button" class="mood-btn" data-mood="Suka Tampilannya">Suka Tampilannya</button>
+          <button type="button" class="mood-btn" data-mood="Membantu">Membantu</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="whisperInput">Pesan Singkat (maksimal 20 kata)</label>
+        <textarea id="whisperInput" rows="3" placeholder="Tulis pesan singkatmu..."></textarea>
+        <div class="word-count" id="whisperCount">0 / 20 kata</div>
+      </div>
+      <button class="btn-warm" id="submitWhisperBtn">Kunci & Kirim</button>
+      <div class="status-msg" id="whisperStatus"></div>
+    </div>
+  </div>
+
+  <!-- Modal Rahasia Pembuat -->
+  <div class="modal-backdrop" id="secretModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Bisikan Masuk (Khusus Pembuat)</h2>
+        <button class="close-btn" data-close="secretModal">&times;</button>
+      </div>
+      <div class="secret-box" id="secretList">
+        <div class="empty-state">Belum ada bisikan masuk.</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script>
+    function wordCount(str) {
+      const s = str.trim();
+      if (!s) return 0;
+      return s.split(/\s+/).length;
+    }
+
+    function bindCounter(inputEl, counterEl, max) {
+      const refresh = () => {
+        const wc = wordCount(inputEl.value);
+        counterEl.textContent = `${wc} / ${max} kata`;
+        counterEl.classList.toggle("over", wc > max);
+      };
+      inputEl.addEventListener("input", refresh);
+      refresh();
+      return refresh;
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function buildSeedBottles(count = 20) {
+      const names = [
+        "Anonim", "Awan Malam", "Rintik Tenang", "Angin Laut", "Lentera Kecil",
+        "Pesisir Sunyi", "Bintang Redup", "Langkah Pelan", "Napas Lega", "Langit Teduh"
+      ];
+      const openings = [
+        "Hari ini rasanya cukup berat buat dijalani,",
+        "Kadang aku cuma pengen didengerin tanpa langsung disalahin,",
+        "Aku sering kelihatan biasa aja di luar,",
+        "Jujur aku lagi capek nyimpen banyak hal sendirian,",
+        "Ada beberapa hal yang belum sempat aku ceritain ke siapa pun,"
+      ];
+      const middles = [
+        "tapi aku tetap berusaha narik napas dan jalan pelan-pelan.",
+        "padahal pikiran di kepala lagi ramai banget sejak tadi.",
+        "karena nggak semua orang harus tahu isi kepala kita.",
+        "meskipun kadang rasanya pengen rehat sebentar dari segalanya.",
+        "dan nulis di sini bikin dadaku terasa sedikit lebih longgar."
+      ];
+      const closings = [
+        "Semoga siapa pun yang baca ini juga lagi baik-baik aja.",
+        "Pelan-pelan aja, nggak harus buru-buru sembuh dalam sehari.",
+        "Terima kasih sudah mau mendengarkan lewat botol ini.",
+        "Besok semoga harinya terasa lebih ramah ya.",
+        "Tetap jaga diri baik-baik di mana pun kamu berada."
+      ];
+
+      const list = [];
+      for (let i = 0; i < count; i++) {
+        const alias = i % 3 === 0 ? "Anonim" : `${names[i % names.length]} #${101 + i}`;
+        const text = `${openings[i % openings.length]} ${middles[(i * 2) % middles.length]} ${closings[(i * 3) % closings.length]}`;
+        list.push({
+          id: `seed-bottle-${i + 1}`,
+          alias,
+          text,
+          hugs: i % 5
+        });
+      }
+      return list;
+    }
+
+    function buildSeedLanterns(count = 20) {
+      const gratitudeList = [
+        "Terima kasih diriku karena sudah bertahan sampai sejauh ini meski sering merasa lelah.",
+        "Makasih sudah mau memaafkan kesalahan kecil dan tetap belajar pelan-pelan.",
+        "Terima kasih sudah jujur sama perasaan sendiri hari ini.",
+        "Makasih sudah memberi waktu istirahat saat kepala mulai penuh.",
+        "Terima kasih karena nggak menyerah waktu keadaan lagi nggak mudah.",
+        "Makasih sudah berusaha bersikap lembut ke diri sendiri hari ini."
+      ];
+      const extras = [
+        "Kamu sudah cukup.",
+        "Langkah kecilmu tetap berarti.",
+        "Tenang ya, semuanya berproses.",
+        "Bangga sama usahamu hari ini."
+      ];
+
+      const list = [];
+      for (let i = 0; i < count; i++) {
+        const base = gratitudeList[i % gratitudeList.length];
+        const extra = i % 2 === 0 ? ` ${extras[i % extras.length]}` : "";
+        list.push({
+          id: `seed-lantern-${i + 1}`,
+          text: `${base}${extra}`
+        });
+      }
+      return list;
+    }
+
+    const bottlesData = buildSeedBottles(20);
+    const lanternsData = buildSeedLanterns(20);
+    const whispersData = [];
+    let chosenMood = "";
+    let isLanternViewActive = false;
+
+    const storyInput = document.getElementById("storyInput");
+    const refreshStoryCount = bindCounter(storyInput, document.getElementById("storyCount"), 100);
+
+    const lanternInput = document.getElementById("lanternInput");
+    const refreshLanternCount = bindCounter(lanternInput, document.getElementById("lanternCount"), 40);
+
+    const whisperInput = document.getElementById("whisperInput");
+    const refreshWhisperCount = bindCounter(whisperInput, document.getElementById("whisperCount"), 20);
+
+    const container = document.getElementById("canvas-container");
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x06101b);
+    scene.fog = new THREE.FogExp2(0x091c2e, 0.025);
+
+    const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 120);
+    camera.position.set(0, 3.6, 9.4);
+    camera.lookAt(0, 1.2, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0x7fb3d5, 0.95));
+
+    const warmLight = new THREE.PointLight(0xffd166, 2.2, 24);
+    warmLight.position.set(0, 4.2, 2);
+    scene.add(warmLight);
+
+    const moonLight = new THREE.DirectionalLight(0xdbeeff, 1.35);
+    moonLight.position.set(-5, 10, -7);
+    scene.add(moonLight);
+
+    const moonGroup = new THREE.Group();
+    moonGroup.position.set(-5.8, 7.6, -16);
+    const moonDisc = new THREE.Mesh(
+      new THREE.SphereGeometry(1.15, 28, 28),
+      new THREE.MeshBasicMaterial({ color: 0xfff7d6 })
+    );
+    const moonHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(1.75, 28, 28),
+      new THREE.MeshBasicMaterial({
+        color: 0x9ad1ff,
+        transparent: true,
+        opacity: 0.18
+      })
+    );
+    moonGroup.add(moonDisc);
+    moonGroup.add(moonHalo);
+    scene.add(moonGroup);
+
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 260;
+    const starPos = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      starPos[i * 3] = (Math.random() - 0.5) * 34;
+      starPos[i * 3 + 1] = 2.2 + Math.random() * 11;
+      starPos[i * 3 + 2] = -6 - Math.random() * 16;
+    }
+    starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
+    const starMat = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.11,
+      transparent: true,
+      opacity: 0.92
+    });
+    scene.add(new THREE.Points(starGeo, starMat));
+
+    const shootingStars = [];
+
+    function triggerShootingStar() {
+      const starHead = new THREE.Mesh(
+        new THREE.SphereGeometry(0.11, 12, 12),
+        new THREE.MeshBasicMaterial({ color: 0xfff3b0 })
+      );
+      const tailGeo = new THREE.CylinderGeometry(0.015, 0.07, 2.2, 8);
+      tailGeo.rotateZ(Math.PI / 2.6);
+      const tailMesh = new THREE.Mesh(
+        tailGeo,
+        new THREE.MeshBasicMaterial({
+          color: 0xffe599,
+          transparent: true,
+          opacity: 0.78
+        })
+      );
+      tailMesh.position.set(1.05, 0.35, 0);
+
+      const group = new THREE.Group();
+      group.add(starHead);
+      group.add(tailMesh);
+      group.position.set(-5 + Math.random() * 8, 7.6 + Math.random() * 1.4, -7.5 - Math.random() * 3.5);
+      group.userData = {
+        vx: 0.18 + Math.random() * 0.05,
+        vy: -0.095 - Math.random() * 0.025,
+        life: 65
+      };
+      scene.add(group);
+      shootingStars.push(group);
+    }
+
+    const waterGeo = new THREE.PlaneGeometry(30, 22, 76, 56);
+    waterGeo.rotateX(-Math.PI / 2);
+    const pos = waterGeo.attributes.position;
+    const baseY = new Float32Array(pos.count);
+    for (let i = 0; i < pos.count; i++) baseY[i] = pos.getY(i);
+
+    const waterMat = new THREE.MeshStandardMaterial({
+      color: 0x0f3b57,
+      roughness: 0.22,
+      metalness: 0.42
+    });
+    const waterMesh = new THREE.Mesh(waterGeo, waterMat);
+    scene.add(waterMesh);
+
+    const bottleGroupRoot = new THREE.Group();
+    scene.add(bottleGroupRoot);
+    const bottleMeshes = [];
+
+    function buildClearBottleMesh(bottleId) {
+      const group = new THREE.Group();
+
+      const glassMat = new THREE.MeshPhysicalMaterial({
+        color: 0xe6f7ff,
+        roughness: 0.08,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.68
+      });
+
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.29, 0.76, 18), glassMat);
+      body.position.y = 0.38;
+      group.add(body);
+
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.145, 0.26, 14), glassMat);
+      neck.position.y = 0.88;
+      group.add(neck);
+
+      const cork = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.105, 0.095, 0.11, 14),
+        new THREE.MeshStandardMaterial({ color: 0xa47148 })
+      );
+      cork.position.y = 1.03;
+      group.add(cork);
+
+      const paper = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.075, 0.075, 0.48, 12),
+        new THREE.MeshStandardMaterial({
+          color: 0xfff4d6,
+          emissive: 0xffc857,
+          emissiveIntensity: 0.65
+        })
+      );
+      paper.position.y = 0.37;
+      paper.rotation.z = 0.16;
+      group.add(paper);
+
+      group.traverse((obj) => {
+        obj.userData.pickType = "bottle";
+        obj.userData.itemId = bottleId;
+      });
+
+      return group;
+    }
+
+    function spawnBottleIn3D(bottleId, fromLaunch = false, customPos = null) {
+      const mesh = buildClearBottleMesh(bottleId);
+      if (customPos) {
+        mesh.position.set(customPos.x, 0.08, customPos.z);
+        mesh.userData.launching = false;
+      } else if (fromLaunch) {
+        mesh.position.set(-8.2, 1.45, (Math.random() * 4) - 1.5);
+        mesh.userData.launching = true;
+      } else {
+        mesh.position.set((Math.random() * 14) - 7, 0.08, (Math.random() * 5.5) - 2.2);
+        mesh.userData.launching = false;
+      }
+      mesh.userData.speed = 0.011 + Math.random() * 0.007;
+      mesh.userData.phase = Math.random() * Math.PI * 2;
+      bottleGroupRoot.add(mesh);
+      bottleMeshes.push(mesh);
+    }
+
+    const lanternGroupRoot = new THREE.Group();
+    lanternGroupRoot.visible = false;
+    scene.add(lanternGroupRoot);
+    const flyingLanternMeshes = [];
+
+    function buildFlyingLanternMesh(lanternId) {
+      const group = new THREE.Group();
+
+      const shellMat = new THREE.MeshStandardMaterial({
+        color: 0xffe08a,
+        emissive: 0xff9f1c,
+        emissiveIntensity: 1.15,
+        roughness: 0.45,
+        transparent: true,
+        opacity: 0.9
+      });
+
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 0.46, 14), shellMat);
+      group.add(body);
+
+      const baseRing = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.22, 0.04, 14),
+        new THREE.MeshStandardMaterial({ color: 0x5c3a1e })
+      );
+      baseRing.position.y = -0.24;
+      group.add(baseRing);
+
+      group.traverse((obj) => {
+        obj.userData.pickType = "lantern";
+        obj.userData.itemId = lanternId;
+      });
+
+      return group;
+    }
+
+    function spawnFlyingLantern(lanternId, startLow = false, customPos = null) {
+      const lMesh = buildFlyingLanternMesh(lanternId);
+      if (customPos) {
+        lMesh.position.set(customPos.x, customPos.y, customPos.z);
+      } else if (startLow) {
+        lMesh.position.set((Math.random() * 12) - 6, 1.5, (Math.random() * 5) - 4);
+      } else {
+        lMesh.position.set((Math.random() * 16) - 8, 2.2 + Math.random() * 4.2, (Math.random() * 6) - 5.5);
+      }
+      lMesh.userData.riseSpeed = 0.004 + Math.random() * 0.004;
+      lMesh.userData.driftSpeed = (Math.random() - 0.5) * 0.005;
+      lMesh.userData.phase = Math.random() * Math.PI * 2;
+      const s = 0.72 + Math.random() * 0.35;
+      lMesh.scale.set(s, s, s);
+      lanternGroupRoot.add(lMesh);
+      flyingLanternMeshes.push(lMesh);
+    }
+
+    for (let i = 0; i < bottlesData.length; i++) {
+      const spreadX = -7.2 + (i / 19) * 14.4;
+      const spreadZ = -2.2 + ((i * 37) % 10) * 0.45;
+      spawnBottleIn3D(bottlesData[i].id, false, { x: spreadX, z: spreadZ });
+    }
+
+    for (let i = 0; i < lanternsData.length; i++) {
+      const lx = -7.5 + (i / 19) * 15;
+      const ly = 2.1 + ((i * 29) % 10) * 0.42;
+      const lz = -5.2 + ((i * 19) % 8) * 0.55;
+      spawnFlyingLantern(lanternsData[i].id, false, { x: lx, y: ly, z: lz });
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    renderer.domElement.addEventListener("click", (event) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(pointer, camera);
+      const activeTargets = isLanternViewActive
+        ? flyingLanternMeshes.flatMap((g) => g.children)
+        : bottleMeshes.flatMap((g) => g.children);
+
+      const hits = raycaster.intersectObjects(activeTargets, false);
+      if (hits.length > 0) {
+        const hitData = hits[0].object.userData;
+        if (hitData.pickType === "bottle" && !isLanternViewActive) {
+          openLetterById(hitData.itemId);
+        } else if (hitData.pickType === "lantern" && isLanternViewActive) {
+          openLanternById(hitData.itemId);
+        }
+      }
+    });
+
+    function openModal(id) {
+      document.getElementById(id).classList.add("open");
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove("open");
+    }
+
+    document.querySelectorAll("[data-close]").forEach((btn) => {
+      btn.addEventListener("click", () => closeModal(btn.dataset.close));
+    });
+
+    const aliasInput = document.getElementById("aliasInput");
+    const sendStatus = document.getElementById("sendStatus");
+
+    function openSendModal() {
+      sendStatus.textContent = "";
+      openModal("sendModal");
+    }
+
+    document.getElementById("navSend").addEventListener("click", openSendModal);
+    document.getElementById("mainSendBtn").addEventListener("click", openSendModal);
+
+    document.getElementById("submitStoryBtn").addEventListener("click", () => {
+      const alias = aliasInput.value.trim() || "Anonim";
+      const text = storyInput.value.trim();
+      const wc = wordCount(text);
+
+      if (!text) {
+        sendStatus.textContent = "Isi cerita belum ditulis.";
+        return;
+      }
+      if (wc > 100) {
+        sendStatus.textContent = "Cerita melebihi batas maksimal 100 kata.";
+        return;
+      }
+
+      const id = `bottle-${Date.now()}-${Math.random()}`;
+      bottlesData.unshift({
+        id,
+        alias,
+        text,
+        hugs: 0
+      });
+
+      aliasInput.value = "";
+      storyInput.value = "";
+      refreshStoryCount();
+      sendStatus.textContent = "Botol hanyut ke laut dan bintang jatuh melintas di langit malam.";
+      spawnBottleIn3D(id, true);
+      triggerShootingStar();
+    });
+
+    const letterSheet = document.getElementById("letterSheet");
+    const letterStatus = document.getElementById("letterStatus");
+
+    function openLetterById(bottleId) {
+      const item = bottlesData.find((b) => b.id === bottleId);
+      if (!item) return;
+      letterStatus.textContent = "";
+
+      letterSheet.innerHTML = `
+        <div class="letter-from">Dari: ${escapeHtml(item.alias)}</div>
+        <div class="letter-body">${escapeHtml(item.text)}</div>
+        <div class="letter-actions">
+          <button type="button" class="btn-hug" id="hugBtn">🫂 Pelukan Virtual (${item.hugs})</button>
+        </div>
+      `;
+
+      openModal("letterModal");
+
+      document.getElementById("hugBtn").addEventListener("click", () => {
+        item.hugs += 1;
+        document.getElementById("hugBtn").textContent = `🫂 Pelukan Virtual (${item.hugs})`;
+        letterStatus.textContent = "Pelukan virtual dikirim.";
+      });
+    }
+
+    function openLanternById(lanternId) {
+      const item = lanternsData.find((l) => l.id === lanternId);
+      if (!item) return;
+      letterStatus.textContent = "";
+      letterSheet.innerHTML = `
+        <div class="letter-from">Lentera Ucapan Terima Kasih</div>
+        <div class="letter-body">${escapeHtml(item.text)}</div>
+      `;
+      openModal("letterModal");
+    }
+
+    function pickRandomBottle() {
+      if (bottlesData.length === 0) return;
+      const rand = bottlesData[Math.floor(Math.random() * bottlesData.length)];
+      openLetterById(rand.id);
+    }
+
+    document.getElementById("navPick").addEventListener("click", pickRandomBottle);
+    document.getElementById("mainPickBtn").addEventListener("click", pickRandomBottle);
+
+    const lanternPanel = document.getElementById("lanternPanel");
+    const lanternGrid = document.getElementById("lanternGrid");
+    const lanternStatus = document.getElementById("lanternStatus");
+    const navLanternBtn = document.getElementById("navLantern");
+
+    navLanternBtn.addEventListener("click", () => {
+      isLanternViewActive = !isLanternViewActive;
+      lanternPanel.classList.toggle("open", isLanternViewActive);
+      navLanternBtn.classList.toggle("active", isLanternViewActive);
+      lanternGroupRoot.visible = isLanternViewActive;
+      bottleGroupRoot.visible = !isLanternViewActive;
+
+      if (isLanternViewActive) {
+        lanternPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    });
+
+    function renderLanterns() {
+      if (lanternsData.length === 0) {
+        lanternGrid.innerHTML = `<div class="empty-state">Belum ada lentera yang dinyalakan.</div>`;
+        return;
+      }
+      lanternGrid.innerHTML = lanternsData
+        .map((item) => `<div class="lantern-card">${escapeHtml(item.text)}</div>`)
+        .join("");
+    }
+
+    renderLanterns();
+
+    document.getElementById("addLanternBtn").addEventListener("click", () => {
+      const txt = lanternInput.value.trim();
+      const wc = wordCount(txt);
+      if (!txt) {
+        lanternStatus.textContent = "Tuliskan ucapan terima kasih untuk dirimu dulu.";
+        return;
+      }
+      if (wc > 40) {
+        lanternStatus.textContent = "Ucapan terima kasih maksimal 40 kata.";
+        return;
+      }
+      const newId = `lantern-${Date.now()}-${Math.random()}`;
+      lanternsData.unshift({ id: newId, text: txt });
+      lanternInput.value = "";
+      refreshLanternCount();
+      lanternStatus.textContent = "Lentera hangat dinyalakan dan melayang di langit malam 3D.";
+      renderLanterns();
+      spawnFlyingLantern(newId, true);
+    });
+
+    const whisperStatus = document.getElementById("whisperStatus");
+    const secretList = document.getElementById("secretList");
+
+    document.querySelectorAll(".mood-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".mood-btn").forEach((b) => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        chosenMood = btn.dataset.mood;
+      });
+    });
+
+    document.getElementById("openWhisperBtn").addEventListener("click", () => {
+      whisperStatus.textContent = "";
+      openModal("whisperModal");
+    });
+
+    document.getElementById("submitWhisperBtn").addEventListener("click", () => {
+      const msg = whisperInput.value.trim();
+      const wc = wordCount(msg);
+      if (!chosenMood) {
+        whisperStatus.textContent = "Pilih 1 suasana hati terlebih dahulu.";
+        return;
+      }
+      if (!msg) {
+        whisperStatus.textContent = "Pesan singkat belum diisi.";
+        return;
+      }
+      if (wc > 20) {
+        whisperStatus.textContent = "Pesan singkat maksimal 20 kata.";
+        return;
+      }
+
+      whispersData.unshift({ mood: chosenMood, msg });
+      chosenMood = "";
+      document.querySelectorAll(".mood-btn").forEach((b) => b.classList.remove("selected"));
+      whisperInput.value = "";
+      refreshWhisperCount();
+      whisperStatus.textContent = "Terkunci dan terkirim khusus ke pembuat.";
+    });
+
+    document.getElementById("openSecretBtn").addEventListener("click", () => {
+      if (whispersData.length === 0) {
+        secretList.innerHTML = `<div class="empty-state">Belum ada bisikan masuk.</div>`;
+      } else {
+        secretList.innerHTML = whispersData
+          .map((w) => `<div class="secret-item"><strong>[${escapeHtml(w.mood)}]</strong> ${escapeHtml(w.msg)}</div>`)
+          .join("");
+      }
+      openModal("secretModal");
+    });
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      starMat.opacity = 0.72 + Math.sin(t * 2.1) * 0.18;
+
+      for (let i = shootingStars.length - 1; i >= 0; i--) {
+        const s = shootingStars[i];
+        s.position.x += s.userData.vx;
+        s.position.y += s.userData.vy;
+        s.userData.life -= 1;
+        if (s.userData.life <= 0) {
+          scene.remove(s);
+          shootingStars.splice(i, 1);
+        }
+      }
+
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        pos.setY(
+          i,
+          baseY[i] +
+            Math.sin(x * 0.7 - t * 2) * 0.14 +
+            Math.cos(z * 0.9 + t * 1.4) * 0.08
+        );
+      }
+      pos.needsUpdate = true;
+      waterGeo.computeVertexNormals();
+
+      for (const b of bottleMeshes) {
+        if (b.userData.launching) {
+          b.position.x += 0.07;
+          b.position.y -= 0.014;
+          b.rotation.z -= 0.04;
+          if (b.position.y <= 0.08) {
+            b.position.y = 0.08;
+            b.userData.launching = false;
+          }
+        } else {
+          b.position.x += b.userData.speed;
+          b.position.y = 0.06 + Math.sin(t * 2.1 + b.userData.phase) * 0.08;
+          b.rotation.z = Math.sin(t * 1.6 + b.userData.phase) * 0.14;
+          b.rotation.x = Math.cos(t * 1.3 + b.userData.phase) * 0.09;
+          if (b.position.x > 9.2) b.position.x = -9.2;
+        }
+      }
+
+      for (const l of flyingLanternMeshes) {
+        l.position.y += l.userData.riseSpeed;
+        l.position.x += l.userData.driftSpeed + Math.sin(t * 0.8 + l.userData.phase) * 0.002;
+        l.rotation.z = Math.sin(t * 1.2 + l.userData.phase) * 0.08;
+        if (l.position.y > 7.4) {
+          l.position.y = 1.3;
+          l.position.x = (Math.random() * 14) - 7;
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
